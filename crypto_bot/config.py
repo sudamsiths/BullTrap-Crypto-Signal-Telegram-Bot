@@ -4,13 +4,14 @@ Fill these in before running.
 """
 
 import os
+from dotenv import load_dotenv
 
-# ---- Telegram settings ----
-# Get this from @BotFather on Telegram
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+load_dotenv()
 
-# The chat/group/channel ID where signals will be sent
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
+BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
 
 # ---- Exchange / market settings ----
 EXCHANGE_ID = "binance"          # ccxt exchange id
@@ -99,7 +100,7 @@ ADX_MIN_THRESHOLD = 25            # below this = ranging, no trade regardless of
 ADX_TIMEFRAME = "1h"              # measure trend strength on 1H (less noisy than 5m)
 
 # ---- BTC market bias filter ----
-USE_BTC_BIAS_FILTER = True        # compute BTC 1H/4H bias once per scan cycle
+USE_BTC_BIAS_FILTER = False        # compute BTC 1H/4H bias once per scan cycle
 BLOCK_SIGNALS_ON_BEARISH_BTC = True   # if True, suppress new altcoin longs while BTC itself is bearish
 
 # ---- State persistence ----
