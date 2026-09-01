@@ -22,6 +22,9 @@ def format_signal_message(signal: dict) -> str:
     oi = signal.get("oi_change_pct")
     oi_line = f"`{oi:+.2f}%`" if oi is not None else "`n/a`"
 
+    pattern = signal.get("pattern_name")
+    pattern_line = f"`{pattern}`" if pattern else "`none detected`"
+
     mode_note = "🧪 DRY_RUN (paper only)" if config.DRY_RUN else (
         "🧪 TESTNET" if config.USE_TESTNET else "🔴 LIVE"
     )
@@ -39,11 +42,12 @@ def format_signal_message(signal: dict) -> str:
         f"🚀 TP2: `{signal['tp2']:.6f}` (+{pct(signal['tp2']):.1f}%)\n"
         f"🌕 TP3: `{signal['tp3']:.6f}` (+{pct(signal['tp3']):.1f}%)\n"
         f"🛡️ Stop Loss: `{signal['sl']:.6f}` (-{config.SL_PCT*100:.1f}%, moves to BE after TP1)\n\n"
-        f"📊 *CONFIRMATIONS ({signal['confirmation_count']}/5)*\n"
+        f"📊 *CONFIRMATIONS ({signal['confirmation_count']}/6)*\n"
         f"▫️ 5m volume spike: `{signal['volume_ratio']}x`\n"
         f"▫️ 5m above EMA{config.EMA_PERIOD}: `{signal['above_ema20']}`\n"
         f"{mtf_lines}\n"
-        f"▫️ Open Interest change: {oi_line}\n\n"
+        f"▫️ Open Interest change: {oi_line}\n"
+        f"▫️ 1m pattern: {pattern_line}\n\n"
         f"🎯 Score: `{signal['score']}/100`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚠️ Not financial advice. DYOR."

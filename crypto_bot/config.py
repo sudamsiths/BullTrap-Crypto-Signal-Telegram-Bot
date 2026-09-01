@@ -76,7 +76,12 @@ OI_CHANGE_LOOKBACK = 6            # number of OI snapshots to compare (5m each ~
 OI_CHANGE_THRESHOLD_PCT = 3.0     # OI must have grown at least this % to confirm "fresh inflow"
 
 # ---- Confidence scoring ----
-MIN_CONFIRMATIONS = 5             # out of: 5m vol spike, 5m EMA, 1h EMA, 4h EMA, OI inflow (max 5)
+MIN_CONFIRMATIONS = 5             # out of: 5m vol spike, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern (max 6)
+
+# ---- 1m candlestick pattern (entry timing) ----
+PATTERN_TIMEFRAME = "1m"
+PATTERN_CANDLE_LIMIT = 20         # only need a handful of recent 1m candles
+REQUIRE_PATTERN_CONFIRMATION = False  # if True, a signal CANNOT fire without a 1m pattern match
 
 # ---- State persistence ----
 STATE_FILE = "positions_state.json"

@@ -11,6 +11,8 @@ from indicators import add_ema, volume_spike_ratio, price_above_ema
 from multi_timeframe import get_mtf_confirmations, mtf_all_bullish
 from open_interest import get_oi_change_pct
 from fibonacci import fibonacci_extension_targets
+from candlestick_patterns import detect_bullish_pattern
+from data_fetch import fetch_ohlcv
 
 
 def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None) -> dict | None:
@@ -37,13 +39,26 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     if futures_exchange is not None:
         oi_change_pct = get_oi_change_pct(futures_exchange, symbol)
 
-    # ---- Score confirmations (max 5) ----
+    # ---- 1m candlestick pattern (entry timing) ----
+    pattern_name = None
+    try:
+        df_1m = fetch_ohlcv(exchange, symbol, timeframe=config.PATTERN_TIMEFRAME,
+                             limit=config.PATTERN_CANDLE_LIMIT)
+        pattern_name = detect_bullish_pattern(df_1m)
+    except Exception:
+        pattern_name = None
+
+    if config.REQUIRE_PATTERN_CONFIRMATION and pattern_name is None:
+        return None  # hard gate: no valid 1m pattern, don't fire regardless of score
+
+    # ---- Score confirmations (max 6) ----
     confirmations = {
         "5m_volume_spike": vol_ratio_5m >= config.VOLUME_SPIKE_MULTIPLIER,
         "5m_above_ema": above_ema_5m,
         "1h_above_ema": mtf.get("1h", {}).get("above_ema", False),
         "4h_above_ema": mtf.get("4h", {}).get("above_ema", False),
         "oi_inflow": (oi_change_pct is not None and oi_change_pct >= config.OI_CHANGE_THRESHOLD_PCT),
+        "1m_pattern": pattern_name is not None,
     }
     confirmation_count = sum(1 for v in confirmations.values() if v)
     score = int((confirmation_count / len(confirmations)) * 100)
@@ -69,6 +84,7 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "above_ema20": above_ema_5m,
         "mtf": mtf,
         "oi_change_pct": oi_change_pct,
+        "pattern_name": pattern_name,
         "confirmations": confirmations,
         "confirmation_count": confirmation_count,
         "score": score,
