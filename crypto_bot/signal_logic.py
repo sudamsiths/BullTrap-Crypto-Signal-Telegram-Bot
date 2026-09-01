@@ -15,6 +15,9 @@ from candlestick_patterns import detect_bullish_pattern
 from data_fetch import fetch_ohlcv
 from adx import current_adx
 from btc_bias import bias_allows_longs
+from daily_trend import get_daily_trend
+from rsi import is_overbought, has_bullish_divergence
+from support_resistance import has_room_to_target
 
 
 def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None,
@@ -46,7 +49,17 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     else:
         adx_value = None
 
+    # ---- Hard gate: daily trend ----
+    daily_trend = get_daily_trend(exchange, symbol) if config.USE_DAILY_TREND_FILTER else {}
+    if config.USE_DAILY_TREND_FILTER and config.REQUIRE_DAILY_UPTREND:
+        if not daily_trend.get("above_ema_slow", False):
+            return None  # price below daily EMA200 - macro downtrend, skip
+
     df_5m = add_ema(df_5m, config.EMA_PERIOD)
+
+    # ---- Hard gate: RSI overbought ----
+    if config.USE_RSI_OVERBOUGHT_FILTER and is_overbought(df_5m):
+        return None  # already extended - lower probability of further upside
 
     vol_ratio_5m = volume_spike_ratio(df_5m)
     above_ema_5m = price_above_ema(df_5m, config.EMA_PERIOD)
@@ -72,7 +85,20 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     if config.REQUIRE_PATTERN_CONFIRMATION and pattern_name is None:
         return None  # hard gate: no valid 1m pattern, don't fire regardless of score
 
-    # ---- Score confirmations (max 6) ----
+    # ---- Support/Resistance confluence ----
+    sr_room = True
+    if config.USE_SR_FILTER:
+        try:
+            df_sr = fetch_ohlcv(exchange, symbol, timeframe=config.SR_TIMEFRAME,
+                                 limit=config.SR_LOOKBACK + 30)
+            sr_room = has_room_to_target(df_sr, last_close)
+        except Exception:
+            sr_room = True  # fail open - don't block a signal on a data hiccup
+
+    # ---- RSI bullish divergence (bonus confirmation, not a gate) ----
+    rsi_divergence = has_bullish_divergence(df_5m)
+
+    # ---- Score confirmations (max 9) ----
     confirmations = {
         "5m_volume_spike": vol_ratio_5m >= config.VOLUME_SPIKE_MULTIPLIER,
         "5m_above_ema": above_ema_5m,
@@ -80,6 +106,9 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "4h_above_ema": mtf.get("4h", {}).get("above_ema", False),
         "oi_inflow": (oi_change_pct is not None and oi_change_pct >= config.OI_CHANGE_THRESHOLD_PCT),
         "1m_pattern": pattern_name is not None,
+        "daily_golden_cross": daily_trend.get("golden_cross", False),
+        "rsi_bullish_divergence": rsi_divergence,
+        "sr_room_to_target": sr_room,
     }
     confirmation_count = sum(1 for v in confirmations.values() if v)
     score = int((confirmation_count / len(confirmations)) * 100)
@@ -108,6 +137,9 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "pattern_name": pattern_name,
         "adx": adx_value,
         "btc_bias": btc_bias.get("bias") if btc_bias else None,
+        "daily_golden_cross": daily_trend.get("golden_cross"),
+        "rsi_divergence": rsi_divergence,
+        "sr_room_to_target": sr_room,
         "confirmations": confirmations,
         "confirmation_count": confirmation_count,
         "score": score,

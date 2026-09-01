@@ -20,6 +20,7 @@ from signal_logic import build_signal
 from telegram_bot import send_signal, send_text
 from symbols import get_symbols
 from btc_bias import get_btc_bias
+from correlation import is_too_correlated_with_open_positions
 from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
@@ -68,8 +69,13 @@ async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
             signal = build_signal(spot_exchange, symbol, df, futures_exchange=futures_exchange,
                                    btc_bias=btc_bias)
             if signal:
+                open_symbols = list(position_tracker.get_open_positions().keys())
+                if is_too_correlated_with_open_positions(spot_exchange, symbol, open_symbols):
+                    print(f"[SKIP] {symbol}: too correlated with an already-open position")
+                    continue
+
                 print(f"[SIGNAL] {symbol} score={signal['score']} "
-                      f"confirmations={signal['confirmation_count']}/6")
+                      f"confirmations={signal['confirmation_count']}/9")
                 await send_signal(signal)
                 open_long_position(futures_exchange, symbol, signal)
             else:

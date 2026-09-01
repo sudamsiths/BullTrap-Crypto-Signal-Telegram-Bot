@@ -4,14 +4,13 @@ Fill these in before running.
 """
 
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# ---- Telegram settings ----
+# Get this from @BotFather on Telegram
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
-BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
+# The chat/group/channel ID where signals will be sent
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ---- Exchange / market settings ----
 EXCHANGE_ID = "binance"          # ccxt exchange id
@@ -86,7 +85,7 @@ OI_CHANGE_LOOKBACK = 6            # number of OI snapshots to compare (5m each ~
 OI_CHANGE_THRESHOLD_PCT = 3.0     # OI must have grown at least this % to confirm "fresh inflow"
 
 # ---- Confidence scoring ----
-MIN_CONFIRMATIONS = 5             # out of: 5m vol spike, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern (max 6)
+MIN_CONFIRMATIONS = 6             # out of 9 total: 5m vol, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern, daily golden cross, RSI divergence, S/R room
 
 # ---- 1m candlestick pattern (entry timing) ----
 PATTERN_TIMEFRAME = "1m"
@@ -100,8 +99,34 @@ ADX_MIN_THRESHOLD = 25            # below this = ranging, no trade regardless of
 ADX_TIMEFRAME = "1h"              # measure trend strength on 1H (less noisy than 5m)
 
 # ---- BTC market bias filter ----
-USE_BTC_BIAS_FILTER = False        # compute BTC 1H/4H bias once per scan cycle
+USE_BTC_BIAS_FILTER = True        # compute BTC 1H/4H bias once per scan cycle
 BLOCK_SIGNALS_ON_BEARISH_BTC = True   # if True, suppress new altcoin longs while BTC itself is bearish
+
+# ---- Daily trend filter ----
+USE_DAILY_TREND_FILTER = True
+DAILY_EMA_FAST = 50
+DAILY_EMA_SLOW = 200
+REQUIRE_DAILY_UPTREND = True      # hard gate: skip if price is below the daily EMA200
+
+# ---- RSI settings ----
+RSI_PERIOD = 14
+RSI_OVERBOUGHT_THRESHOLD = 65
+USE_RSI_OVERBOUGHT_FILTER = True  # hard gate: skip if 5m RSI is already overbought
+RSI_DIVERGENCE_LOOKBACK = 40
+
+# ---- Support/Resistance confluence ----
+USE_SR_FILTER = True
+SR_TIMEFRAME = "1h"
+SR_LOOKBACK = 150
+SR_PIVOT_WINDOW = 5
+SR_CLUSTER_PCT = 0.5
+SR_MIN_TOUCHES = 2
+SR_MIN_ROOM_PCT = 1.5             # entry must be at least this % below the nearest resistance zone
+
+# ---- Correlation-aware position sizing ----
+USE_CORRELATION_FILTER = True
+CORRELATION_LOOKBACK = 100
+CORRELATION_THRESHOLD = 0.75      # skip a new position this correlated with an already-open one
 
 # ---- State persistence ----
 STATE_FILE = "positions_state.json"
