@@ -25,6 +25,12 @@ def format_signal_message(signal: dict) -> str:
     pattern = signal.get("pattern_name")
     pattern_line = f"`{pattern}`" if pattern else "`none detected`"
 
+    adx = signal.get("adx")
+    adx_line = f"`{adx:.1f}`" if adx is not None else "`n/a`"
+
+    btc_bias = signal.get("btc_bias")
+    btc_bias_emoji = {"bullish": "🟢", "bearish": "🔴", "neutral": "🟡"}.get(btc_bias, "🟡")
+
     mode_note = "🧪 DRY_RUN (paper only)" if config.DRY_RUN else (
         "🧪 TESTNET" if config.USE_TESTNET else "🔴 LIVE"
     )
@@ -47,7 +53,9 @@ def format_signal_message(signal: dict) -> str:
         f"▫️ 5m above EMA{config.EMA_PERIOD}: `{signal['above_ema20']}`\n"
         f"{mtf_lines}\n"
         f"▫️ Open Interest change: {oi_line}\n"
-        f"▫️ 1m pattern: {pattern_line}\n\n"
+        f"▫️ 1m pattern: {pattern_line}\n"
+        f"▫️ ADX (trend strength, {config.ADX_TIMEFRAME}): {adx_line}\n\n"
+        f"⚡ BTC MARKET BIAS: {btc_bias_emoji} `{(btc_bias or 'n/a').upper()}`\n\n"
         f"🎯 Score: `{signal['score']}/100`\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⚠️ Not financial advice. DYOR."

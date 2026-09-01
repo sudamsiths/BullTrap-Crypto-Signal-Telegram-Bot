@@ -92,5 +92,15 @@ PATTERN_TIMEFRAME = "1m"
 PATTERN_CANDLE_LIMIT = 20         # only need a handful of recent 1m candles
 REQUIRE_PATTERN_CONFIRMATION = False  # if True, a signal CANNOT fire without a 1m pattern match
 
+# ---- Trend strength filter (ADX) ----
+USE_ADX_FILTER = True             # hard gate: skip symbols in a ranging/choppy market
+ADX_PERIOD = 14
+ADX_MIN_THRESHOLD = 25            # below this = ranging, no trade regardless of other confirmations
+ADX_TIMEFRAME = "1h"              # measure trend strength on 1H (less noisy than 5m)
+
+# ---- BTC market bias filter ----
+USE_BTC_BIAS_FILTER = True        # compute BTC 1H/4H bias once per scan cycle
+BLOCK_SIGNALS_ON_BEARISH_BTC = True   # if True, suppress new altcoin longs while BTC itself is bearish
+
 # ---- State persistence ----
 STATE_FILE = "positions_state.json"

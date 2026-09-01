@@ -13,17 +13,38 @@ from open_interest import get_oi_change_pct
 from fibonacci import fibonacci_extension_targets
 from candlestick_patterns import detect_bullish_pattern
 from data_fetch import fetch_ohlcv
+from adx import current_adx
+from btc_bias import bias_allows_longs
 
 
-def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None) -> dict | None:
+def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None,
+                  btc_bias: dict = None) -> dict | None:
     """
     Returns a fully-scored signal dict if enough confirmations line up,
     otherwise None. `futures_exchange` is optional - pass a futures-mode
     ccxt instance to enable open-interest confirmation; without it OI is
-    simply skipped (not counted as a confirmation).
+    simply skipped (not counted as a confirmation). `btc_bias` is the dict
+    from btc_bias.get_btc_bias(), computed once per scan cycle by main.py.
     """
+    # ---- Hard gate: BTC market bias ----
+    if btc_bias is not None and not bias_allows_longs(btc_bias):
+        return None  # BTC itself is bearish - suppress new altcoin longs
+
     if len(df_5m) < config.EMA_PERIOD + config.FIB_LOOKBACK:
         return None
+
+    # ---- Hard gate: trend strength (ADX) ----
+    if config.USE_ADX_FILTER:
+        try:
+            df_adx = fetch_ohlcv(exchange, symbol, timeframe=config.ADX_TIMEFRAME,
+                                  limit=config.ADX_PERIOD * 3)
+            adx_value = current_adx(df_adx)
+        except Exception:
+            adx_value = 0.0
+        if adx_value < config.ADX_MIN_THRESHOLD:
+            return None  # ranging/choppy market - don't trade this symbol right now
+    else:
+        adx_value = None
 
     df_5m = add_ema(df_5m, config.EMA_PERIOD)
 
@@ -85,6 +106,8 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "mtf": mtf,
         "oi_change_pct": oi_change_pct,
         "pattern_name": pattern_name,
+        "adx": adx_value,
+        "btc_bias": btc_bias.get("bias") if btc_bias else None,
         "confirmations": confirmations,
         "confirmation_count": confirmation_count,
         "score": score,

@@ -19,6 +19,7 @@ from data_fetch import get_exchange, fetch_ohlcv
 from signal_logic import build_signal
 from telegram_bot import send_signal, send_text
 from symbols import get_symbols
+from btc_bias import get_btc_bias
 from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
@@ -51,12 +52,21 @@ async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
         print(f"[SKIP SCAN] Max open positions ({config.MAX_OPEN_POSITIONS}) reached")
         return
 
+    btc_bias = get_btc_bias(spot_exchange) if config.USE_BTC_BIAS_FILTER else None
+    if btc_bias:
+        print(f"[BTC BIAS] {btc_bias['bias']} (1h_above_ema={btc_bias['1h_above_ema']}, "
+              f"4h_above_ema={btc_bias['4h_above_ema']})")
+        if config.BLOCK_SIGNALS_ON_BEARISH_BTC and btc_bias["bias"] == "bearish":
+            print("[SKIP SCAN] BTC is bearish - suppressing new long signals this cycle")
+            return
+
     for symbol in symbols:
         if position_tracker.has_open_position(symbol):
             continue
         try:
             df = fetch_ohlcv(spot_exchange, symbol)
-            signal = build_signal(spot_exchange, symbol, df, futures_exchange=futures_exchange)
+            signal = build_signal(spot_exchange, symbol, df, futures_exchange=futures_exchange,
+                                   btc_bias=btc_bias)
             if signal:
                 print(f"[SIGNAL] {symbol} score={signal['score']} "
                       f"confirmations={signal['confirmation_count']}/6")
