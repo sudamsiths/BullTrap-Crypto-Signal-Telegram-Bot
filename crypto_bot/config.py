@@ -21,7 +21,16 @@ SYMBOLS = [
     "BCH/USDT", "NEAR/USDT", "UNI/USDT", "APT/USDT", "ARB/USDT",
     "OP/USDT", "SUI/USDT", "INJ/USDT", "SEI/USDT", "TIA/USDT",
     "PEPE/USDT", "WIF/USDT", "FLOKI/USDT", "BONK/USDT", "BERA/USDT",
-]  # coins to watch
+]  # only used when USE_ALL_USDT_PAIRS = False
+
+# ---- Scan universe ----
+# True: ignore the SYMBOLS list above and auto-fetch every liquid USDT pair
+# from Binance at startup instead. Much less maintenance, but scan cycles
+# take longer - tune MIN_24H_VOLUME_USDT / MAX_SYMBOLS_TO_SCAN below.
+USE_ALL_USDT_PAIRS = True
+MIN_24H_VOLUME_USDT = 10_000_000   # skip illiquid/low-volume coins (10M+ 24h volume)
+MAX_SYMBOLS_TO_SCAN = 120          # hard cap even after volume filtering, to protect rate limits
+
 TIMEFRAME = "5m"                 # candle timeframe to scan
 CANDLE_LIMIT = 200               # how many candles to pull each check
 
@@ -34,7 +43,7 @@ TP3_PCT = 0.085                  # +8.5%
 SL_PCT = 0.025                   # -2.5%
 
 # ---- Scheduler settings ----
-CHECK_INTERVAL_SECONDS = 300     # how often to scan (5 minutes)
+CHECK_INTERVAL_SECONDS = 600     # how often to scan (10 min - raised because scanning ~120 symbols x 4 timeframes takes a while)
 
 # =====================================================================
 # REAL TRADING SETTINGS - read the README before touching DRY_RUN / USE_TESTNET

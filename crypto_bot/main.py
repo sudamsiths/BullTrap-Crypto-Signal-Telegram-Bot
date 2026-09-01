@@ -18,6 +18,7 @@ import position_tracker
 from data_fetch import get_exchange, fetch_ohlcv
 from signal_logic import build_signal
 from telegram_bot import send_signal, send_text
+from symbols import get_symbols
 from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
@@ -45,12 +46,12 @@ async def monitor_open_positions(spot_exchange, futures_exchange):
             position_tracker.close_position(symbol)
 
 
-async def scan_for_signals(spot_exchange, futures_exchange):
+async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
     if position_tracker.open_position_count() >= config.MAX_OPEN_POSITIONS:
         print(f"[SKIP SCAN] Max open positions ({config.MAX_OPEN_POSITIONS}) reached")
         return
 
-    for symbol in config.SYMBOLS:
+    for symbol in symbols:
         if position_tracker.has_open_position(symbol):
             continue
         try:
@@ -58,7 +59,7 @@ async def scan_for_signals(spot_exchange, futures_exchange):
             signal = build_signal(spot_exchange, symbol, df, futures_exchange=futures_exchange)
             if signal:
                 print(f"[SIGNAL] {symbol} score={signal['score']} "
-                      f"confirmations={signal['confirmation_count']}/5")
+                      f"confirmations={signal['confirmation_count']}/6")
                 await send_signal(signal)
                 open_long_position(futures_exchange, symbol, signal)
             else:
@@ -75,9 +76,10 @@ async def scan_for_signals(spot_exchange, futures_exchange):
 async def main_loop():
     spot_exchange = get_exchange()
     futures_exchange = get_trading_exchange()
+    symbols = get_symbols(spot_exchange)  # loaded once at startup; restart the bot to pick up new listings
 
     mode = "DRY_RUN (paper)" if config.DRY_RUN else ("TESTNET" if config.USE_TESTNET else "LIVE - REAL MONEY")
-    print(f"Bot started in {mode} mode. Watching {len(config.SYMBOLS)} symbols "
+    print(f"Bot started in {mode} mode. Watching {len(symbols)} symbols "
           f"every {config.CHECK_INTERVAL_SECONDS}s")
 
     if not config.DRY_RUN and not config.USE_TESTNET:
@@ -87,7 +89,7 @@ async def main_loop():
 
     while True:
         await monitor_open_positions(spot_exchange, futures_exchange)
-        await scan_for_signals(spot_exchange, futures_exchange)
+        await scan_for_signals(spot_exchange, futures_exchange, symbols)
         await asyncio.sleep(config.CHECK_INTERVAL_SECONDS)
 
 
