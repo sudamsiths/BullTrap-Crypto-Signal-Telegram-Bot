@@ -3,3 +3,4 @@ ccxt==4.5.76
 pandas
 ta
 requests
+python-dotenv

@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="update BTC market bias filter to allow altcoin longs during bearish conditions">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/main.py" afterDir="false" />
-    </list>
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add support for loading environment variables from .env file and update .gitignore" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -134,7 +130,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788366696075</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="add support for loading environment variables from .env file and update .gitignore">
+      <option name="closed" value="true" />
+      <created>1788368138441</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1788368138441</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -145,6 +149,7 @@
     <MESSAGE value="add daily trend and RSI filters to signal logic, implement correlation-aware position management" />
     <MESSAGE value="add Procfile to define worker process for running main.py" />
     <MESSAGE value="update BTC market bias filter to allow altcoin longs during bearish conditions" />
-    <option name="LAST_COMMIT_MESSAGE" value="update BTC market bias filter to allow altcoin longs during bearish conditions" />
+    <MESSAGE value="add support for loading environment variables from .env file and update .gitignore" />
+    <option name="LAST_COMMIT_MESSAGE" value="add support for loading environment variables from .env file and update .gitignore" />
   </component>
 </project>
