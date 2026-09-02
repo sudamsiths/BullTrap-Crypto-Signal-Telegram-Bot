@@ -11,7 +11,10 @@ Run with: python3 main.py
 """
 
 import asyncio
+import os
 import traceback
+
+from dotenv import load_dotenv
 
 import config
 import position_tracker
@@ -25,6 +28,9 @@ from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
 )
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 async def monitor_open_positions(spot_exchange, futures_exchange):
@@ -110,4 +116,8 @@ async def main_loop():
 
 
 if __name__ == "__main__":
+    # Example usage of environment variables
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    print(f"Telegram Bot Token: {telegram_token}")
+
     asyncio.run(main_loop())

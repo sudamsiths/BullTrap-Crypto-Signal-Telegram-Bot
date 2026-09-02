@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add Procfile to define worker process for running main.py">
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="update BTC market bias filter to allow altcoin longs during bearish conditions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/crypto_bot/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/crypto_bot/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -125,7 +126,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788279556372</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="update BTC market bias filter to allow altcoin longs during bearish conditions">
+      <option name="closed" value="true" />
+      <created>1788366696075</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1788366696075</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -135,6 +144,7 @@
     <MESSAGE value="add Telegram bot commands and database initialization for signal storage" />
     <MESSAGE value="add daily trend and RSI filters to signal logic, implement correlation-aware position management" />
     <MESSAGE value="add Procfile to define worker process for running main.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="add Procfile to define worker process for running main.py" />
+    <MESSAGE value="update BTC market bias filter to allow altcoin longs during bearish conditions" />
+    <option name="LAST_COMMIT_MESSAGE" value="update BTC market bias filter to allow altcoin longs during bearish conditions" />
   </component>
 </project>
