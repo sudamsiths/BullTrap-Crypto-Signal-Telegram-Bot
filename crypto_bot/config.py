@@ -99,8 +99,8 @@ ADX_MIN_THRESHOLD = 25            # below this = ranging, no trade regardless of
 ADX_TIMEFRAME = "1h"              # measure trend strength on 1H (less noisy than 5m)
 
 # ---- BTC market bias filter ----
-USE_BTC_BIAS_FILTER = True        # compute BTC 1H/4H bias once per scan cycle
-BLOCK_SIGNALS_ON_BEARISH_BTC = True   # if True, suppress new altcoin longs while BTC itself is bearish
+USE_BTC_BIAS_FILTER = True        # compute BTC 1H/4H bias once per scan cycle (still shown in alerts)
+BLOCK_SIGNALS_ON_BEARISH_BTC = False   # if True, suppress new altcoin longs while BTC itself is bearish
 
 # ---- Daily trend filter ----
 USE_DAILY_TREND_FILTER = True

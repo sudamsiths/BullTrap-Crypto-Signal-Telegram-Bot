@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add Telegram bot commands and database initialization for signal storage">
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add Procfile to define worker process for running main.py">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/crypto_bot/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/signal_logic.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/signal_logic.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/telegram_bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/telegram_bot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,20 +46,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.signal_logic.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "D:/Crypto/Telegram Bot",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.signal_logic.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/Crypto/Telegram Bot&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -112,7 +109,23 @@
       <option name="project" value="LOCAL" />
       <updated>1788263263390</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="add daily trend and RSI filters to signal logic, implement correlation-aware position management">
+      <option name="closed" value="true" />
+      <created>1788279164152</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1788279164152</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add Procfile to define worker process for running main.py">
+      <option name="closed" value="true" />
+      <created>1788279556372</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1788279556372</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -120,6 +133,8 @@
     <MESSAGE value="add dynamic USDT symbol fetching and filtering logic" />
     <MESSAGE value="add ADX and BTC market bias filters to signal logic" />
     <MESSAGE value="add Telegram bot commands and database initialization for signal storage" />
-    <option name="LAST_COMMIT_MESSAGE" value="add Telegram bot commands and database initialization for signal storage" />
+    <MESSAGE value="add daily trend and RSI filters to signal logic, implement correlation-aware position management" />
+    <MESSAGE value="add Procfile to define worker process for running main.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="add Procfile to define worker process for running main.py" />
   </component>
 </project>
