@@ -128,5 +128,25 @@ USE_CORRELATION_FILTER = True
 CORRELATION_LOOKBACK = 100
 CORRELATION_THRESHOLD = 0.75      # skip a new position this correlated with an already-open one
 
+# ---- ATR-based dynamic stops & targets ----
+USE_ATR_STOPS = True              # True: both SL and TP1/2/3 adapt to each coin's own volatility
+ATR_PERIOD = 14
+ATR_SL_MULTIPLIER = 1.5           # SL = entry - (ATR * this)
+ATR_TP1_MULTIPLIER = 1.5          # TP1 = entry + (ATR * this)
+ATR_TP2_MULTIPLIER = 3.0          # TP2 = entry + (ATR * this)
+ATR_TP3_MULTIPLIER = 5.0          # TP3 = entry + (ATR * this)
+
+# ---- Funding rate filter (futures) ----
+USE_FUNDING_RATE_FILTER = True
+FUNDING_RATE_MAX_THRESHOLD = 0.05  # % - skip if funding is this crowded/positive (longs overcrowded)
+
+# ---- Fear & Greed Index (whole-market sentiment) ----
+USE_FEAR_GREED_FILTER = True
+FEAR_GREED_EXTREME_GREED_THRESHOLD = 75   # informational by default; see BLOCK_ON_EXTREME_GREED
+BLOCK_ON_EXTREME_GREED = False    # True: hard-skip ALL signals when market-wide sentiment is euphoric
+
+# ---- Performance tracking ----
+PERFORMANCE_LOG_FILE = "trade_log.jsonl"
+
 # ---- State persistence ----
 STATE_FILE = "positions_state.json"

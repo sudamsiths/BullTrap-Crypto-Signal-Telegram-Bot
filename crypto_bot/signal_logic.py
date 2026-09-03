@@ -18,6 +18,8 @@ from btc_bias import bias_allows_longs
 from daily_trend import get_daily_trend
 from rsi import is_overbought, has_bullish_divergence
 from support_resistance import has_room_to_target
+from atr import current_atr
+from funding_rate import funding_rate_ok
 
 
 def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None,
@@ -73,6 +75,10 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     if futures_exchange is not None:
         oi_change_pct = get_oi_change_pct(futures_exchange, symbol)
 
+    # ---- Hard gate: funding rate (crowded longs) ----
+    if futures_exchange is not None and not funding_rate_ok(futures_exchange, symbol):
+        return None  # funding too positive - longs already crowded, skip
+
     # ---- 1m candlestick pattern (entry timing) ----
     pattern_name = None
     try:
@@ -116,20 +122,32 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     if confirmation_count < config.MIN_CONFIRMATIONS:
         return None  # not enough alignment across timeframes/OI - skip
 
-    # ---- Fibonacci-based targets ----
-    fib = fibonacci_extension_targets(df_5m, last_close)
+    # ---- Targets: ATR-based (volatility-adaptive) or Fibonacci-based ----
     entry = last_close
-    sl = entry * (1 - config.SL_PCT)
+    if config.USE_ATR_STOPS:
+        atr_val = current_atr(df_5m, config.ATR_PERIOD)
+        if atr_val <= 0:
+            atr_val = entry * 0.01  # fallback for too-little-data cases
+        sl = entry - atr_val * config.ATR_SL_MULTIPLIER
+        tp1 = entry + atr_val * config.ATR_TP1_MULTIPLIER
+        tp2 = entry + atr_val * config.ATR_TP2_MULTIPLIER
+        tp3 = entry + atr_val * config.ATR_TP3_MULTIPLIER
+        swing_low = swing_high = None
+    else:
+        fib = fibonacci_extension_targets(df_5m, last_close)
+        sl = entry * (1 - config.SL_PCT)
+        tp1, tp2, tp3 = fib["tp1"], fib["tp2"], fib["tp3"]
+        swing_low, swing_high = fib["swing_low"], fib["swing_high"]
 
     signal = {
         "symbol": symbol,
         "entry": entry,
-        "tp1": fib["tp1"],
-        "tp2": fib["tp2"],
-        "tp3": fib["tp3"],
+        "tp1": tp1,
+        "tp2": tp2,
+        "tp3": tp3,
         "sl": sl,
-        "swing_low": fib["swing_low"],
-        "swing_high": fib["swing_high"],
+        "swing_low": swing_low,
+        "swing_high": swing_high,
         "volume_ratio": round(vol_ratio_5m, 2),
         "above_ema20": above_ema_5m,
         "mtf": mtf,

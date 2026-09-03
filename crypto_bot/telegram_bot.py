@@ -75,7 +75,8 @@ async def send_signal(signal: dict):
     )
 
 
-async def send_text(text: str):
-    """Utility for sending plain status/error messages."""
+async def send_text(text: str, markdown: bool = False):
+    """Utility for sending plain (or optionally Markdown-formatted) status messages."""
     bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
-    await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=text)
+    kwargs = {"parse_mode": ParseMode.MARKDOWN} if markdown else {}
+    await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=text, **kwargs)

@@ -11,10 +11,7 @@ Run with: python3 main.py
 """
 
 import asyncio
-import os
 import traceback
-
-from dotenv import load_dotenv
 
 import config
 import position_tracker
@@ -24,16 +21,16 @@ from telegram_bot import send_signal, send_text
 from symbols import get_symbols
 from btc_bias import get_btc_bias
 from correlation import is_too_correlated_with_open_positions
+from fear_greed import get_fear_greed_index, sentiment_allows_signals
+import performance_tracker
 from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
 )
 
-# Load environment variables from .env file
-load_dotenv()
-
 
 async def monitor_open_positions(spot_exchange, futures_exchange):
+    mode = "dry_run" if config.DRY_RUN else ("testnet" if config.USE_TESTNET else "live")
     positions = position_tracker.get_open_positions()
     for symbol, position in positions.items():
         try:
@@ -46,11 +43,25 @@ async def monitor_open_positions(spot_exchange, futures_exchange):
         # TP1 -> move SL to breakeven
         check_tp1_and_update(futures_exchange, symbol, position, current_price)
 
-        # SL hit -> close out (DRY_RUN paper simulation only; real SL orders
-        # fill on the exchange itself and you'd reconcile via order status)
-        if config.DRY_RUN and check_sl_hit_dry_run(position, current_price):
-            print(f"[DRY_RUN] {symbol} hit SL at {current_price} - closing paper position")
-            await send_text(f"🛑 {symbol} stopped out (paper) at {current_price:.6f}")
+        if not config.DRY_RUN:
+            continue  # live/testnet fills are handled by the exchange's own orders
+
+        # ---- DRY_RUN paper simulation: SL and TP3 close the position ----
+        if check_sl_hit_dry_run(position, current_price):
+            return_pct = (current_price / position["entry"] - 1) * 100
+            outcome = "BE" if position.get("tp1_hit") else "SL"
+            print(f"[DRY_RUN] {symbol} stopped out ({outcome}) at {current_price} ({return_pct:+.2f}%)")
+            await send_text(f"🛑 {symbol} stopped out (paper, {outcome}) at {current_price:.6f} "
+                             f"({return_pct:+.2f}%)")
+            performance_tracker.log_signal_closed(symbol, outcome, current_price, return_pct, mode)
+            position_tracker.close_position(symbol)
+            continue
+
+        if current_price >= position["tp3"]:
+            return_pct = (current_price / position["entry"] - 1) * 100
+            print(f"[DRY_RUN] {symbol} hit TP3 at {current_price} ({return_pct:+.2f}%) - closing paper position")
+            await send_text(f"🌕 {symbol} hit TP3 (paper) at {current_price:.6f} ({return_pct:+.2f}%)")
+            performance_tracker.log_signal_closed(symbol, "TP3", current_price, return_pct, mode)
             position_tracker.close_position(symbol)
 
 
@@ -65,6 +76,13 @@ async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
               f"4h_above_ema={btc_bias['4h_above_ema']})")
         if config.BLOCK_SIGNALS_ON_BEARISH_BTC and btc_bias["bias"] == "bearish":
             print("[SKIP SCAN] BTC is bearish - suppressing new long signals this cycle")
+            return
+
+    fng = get_fear_greed_index() if config.USE_FEAR_GREED_FILTER else None
+    if fng:
+        print(f"[FEAR/GREED] {fng['value']} - {fng['classification']}")
+        if not sentiment_allows_signals(fng):
+            print("[SKIP SCAN] Extreme greed - suppressing new signals this cycle")
             return
 
     for symbol in symbols:
@@ -84,6 +102,8 @@ async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
                       f"confirmations={signal['confirmation_count']}/9")
                 await send_signal(signal)
                 open_long_position(futures_exchange, symbol, signal)
+                mode = "dry_run" if config.DRY_RUN else ("testnet" if config.USE_TESTNET else "live")
+                performance_tracker.log_signal_opened(signal, mode)
             else:
                 print(f"[no signal] {symbol}")
         except Exception as e:
@@ -116,8 +136,4 @@ async def main_loop():
 
 
 if __name__ == "__main__":
-    # Example usage of environment variables
-    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    print(f"Telegram Bot Token: {telegram_token}")
-
     asyncio.run(main_loop())

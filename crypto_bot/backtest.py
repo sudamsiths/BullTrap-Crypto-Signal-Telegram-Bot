@@ -1,22 +1,23 @@
 """
 Backtesting engine.
 
-Downloads historical 5m OHLCV data, resamples it into 1h/4h for
-multi-timeframe confirmation, and walks forward candle-by-candle applying
-a backtest-safe version of the signal logic (EMA, volume spike, MTF, ADX,
-Fibonacci targets). For each signal generated, it simulates the outcome by
-looking at what price actually did afterward: did it hit TP1/TP2/TP3 or the
-stop loss first?
+Downloads historical 5m OHLCV data, resamples it into 1h/4h/1d for
+multi-timeframe + daily-trend confirmation, and walks forward candle-by-candle
+applying a backtest-safe version of the full signal logic (EMA, volume spike,
+MTF, ADX, daily golden cross, RSI overbought gate + divergence, S/R room,
+Fibonacci targets, and optionally ATR-based stops).
 
 LIMITATIONS (be aware of these when reading results):
-- Open Interest history and 1m candlestick patterns are NOT included here -
-  OI history isn't available far enough back for most symbols, and 1m data
-  for long backtest windows is a lot of extra data to pull. Live trading
-  will therefore require slightly MORE confirmations to fire than this
-  backtest simulates, so live win-rate could differ from backtest results.
+- Open Interest history and 1m candlestick patterns are NOT simulated - OI
+  history isn't available far enough back for most symbols, and 1m data for
+  long backtest windows is a lot of extra data to pull. The live bot
+  therefore has 2 MORE possible confirmations (OI inflow, 1m pattern) than
+  this backtest can simulate, so live win-rate could differ.
 - No fees or slippage are modeled - real returns will be a bit lower.
-- Swing-high/low detection for Fibonacci targets is the same simple
-  min/max-over-lookback approach used live, not "true" pivot detection.
+- Funding rate / Fear-Greed filters are NOT simulated (live-only, no clean
+  historical data source wired up here).
+- Swing-high/low detection for Fibonacci and S/R zones uses simple
+  min/max-over-lookback and pivot clustering, not "true" pivot detection.
 
 Run with: python3 backtest.py BTC/USDT 60
 (symbol optional, defaults to BTC/USDT; days optional, defaults to 30)
@@ -28,14 +29,17 @@ import pandas as pd
 
 import config
 from data_fetch import get_exchange
-from indicators import add_ema, volume_spike_ratio, price_above_ema
+from indicators import add_ema, volume_spike_ratio
 from fibonacci import fibonacci_extension_targets
 from adx import compute_adx
+from rsi import compute_rsi
+from atr import compute_atr
+from support_resistance import find_pivot_highs, cluster_into_zones
 
 
 def fetch_full_history(exchange, symbol: str, timeframe: str, days: int) -> pd.DataFrame:
     """Paginated historical OHLCV fetch - ccxt only returns ~500-1000 candles per call."""
-    tf_minutes = {"5m": 5, "1h": 60, "4h": 240}[timeframe]
+    tf_minutes = {"5m": 5, "1h": 60, "4h": 240, "1d": 1440}[timeframe]
     total_candles_needed = int((days * 24 * 60) / tf_minutes)
     limit = 1000
 
@@ -60,7 +64,7 @@ def fetch_full_history(exchange, symbol: str, timeframe: str, days: int) -> pd.D
 
 
 def resample_ohlcv(df_5m: pd.DataFrame, rule: str) -> pd.DataFrame:
-    """Builds 1H/4H candles from 5m data via pandas resample."""
+    """Builds 1H/4H/1D candles from 5m data via pandas resample."""
     df = df_5m.set_index("timestamp")
     resampled = df.resample(rule).agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum",
@@ -77,12 +81,39 @@ def mtf_above_ema_at(df_htf: pd.DataFrame, ts: pd.Timestamp, period: int) -> boo
     return bool(visible["close"].iloc[-1] > visible[f"ema{period}"].iloc[-1])
 
 
+def daily_trend_at(df_1d: pd.DataFrame, ts: pd.Timestamp) -> dict:
+    visible = df_1d[df_1d["timestamp"] < ts]
+    if len(visible) < config.DAILY_EMA_SLOW + 5:
+        return {"above_ema_slow": False, "golden_cross": False}
+    visible = add_ema(visible.copy(), config.DAILY_EMA_FAST)
+    visible = add_ema(visible, config.DAILY_EMA_SLOW)
+    last_close = visible["close"].iloc[-1]
+    ema_fast = visible[f"ema{config.DAILY_EMA_FAST}"].iloc[-1]
+    ema_slow = visible[f"ema{config.DAILY_EMA_SLOW}"].iloc[-1]
+    return {
+        "above_ema_slow": bool(last_close > ema_slow),
+        "golden_cross": bool(ema_fast > ema_slow),
+    }
+
+
+def sr_room_at(df_1h: pd.DataFrame, ts: pd.Timestamp, entry_price: float) -> bool:
+    visible = df_1h[df_1h["timestamp"] < ts]
+    if len(visible) < config.SR_LOOKBACK:
+        return True  # not enough history yet - fail open
+    window = visible.iloc[-config.SR_LOOKBACK:]
+    pivots = find_pivot_highs(window)
+    zones = cluster_into_zones(pivots)
+    candidates = [z for z in zones if z["price"] > entry_price and z["touches"] >= config.SR_MIN_TOUCHES]
+    if not candidates:
+        return True
+    nearest = min(candidates, key=lambda z: z["price"])
+    distance_pct = (nearest["price"] - entry_price) / entry_price * 100
+    return distance_pct >= config.SR_MIN_ROOM_PCT
+
+
 def simulate_trade(df_5m: pd.DataFrame, entry_idx: int, entry: float, tp1: float,
                     tp2: float, tp3: float, sl: float, max_lookahead: int = 500) -> dict:
-    """
-    Walks forward from entry_idx candle-by-candle to see what got hit first.
-    Uses a simple 50/25/25 partial-close model matching trade_executor's split.
-    """
+    """Walks forward from entry_idx candle-by-candle; 50/25/25 partial-close model."""
     remaining = 1.0
     realized_pct = 0.0
     tp1_hit = tp2_hit = tp3_hit = False
@@ -102,7 +133,7 @@ def simulate_trade(df_5m: pd.DataFrame, entry_idx: int, entry: float, tp1: float
             tp1_hit = True
             realized_pct += 0.5 * ((tp1 / entry) - 1)
             remaining -= 0.5
-            current_sl = entry  # move to breakeven, matching trade_executor behavior
+            current_sl = entry
 
         if tp1_hit and not tp2_hit and high >= tp2:
             tp2_hit = True
@@ -116,10 +147,9 @@ def simulate_trade(df_5m: pd.DataFrame, entry_idx: int, entry: float, tp1: float
             return {"outcome": "TP3", "return_pct": realized_pct * 100,
                      "tp1_hit": tp1_hit, "tp2_hit": tp2_hit, "tp3_hit": tp3_hit}
 
-    # ran out of lookahead candles - close remaining at last known price
     last_price = df_5m.iloc[end_idx - 1]["close"]
     realized_pct += remaining * ((last_price / entry) - 1)
-    outcome = "TP1" if tp1_hit else ("OPEN_TIMEOUT" if not tp1_hit else "PARTIAL")
+    outcome = "TP1" if tp1_hit else "OPEN_TIMEOUT"
     return {"outcome": outcome, "return_pct": realized_pct * 100,
             "tp1_hit": tp1_hit, "tp2_hit": tp2_hit, "tp3_hit": tp3_hit}
 
@@ -131,16 +161,27 @@ def run_backtest(symbol: str = "BTC/USDT", days: int = 30) -> dict:
     df_5m = fetch_full_history(exchange, symbol, "5m", days)
     print(f"Got {len(df_5m)} 5m candles")
 
+    print(f"Fetching daily history for {symbol} (for EMA{config.DAILY_EMA_SLOW})...")
+    daily_days_needed = config.DAILY_EMA_SLOW + 60 + days  # extra runway before AND through the window
+    df_1d = fetch_full_history(exchange, symbol, "1d", daily_days_needed) if config.USE_DAILY_TREND_FILTER else pd.DataFrame()
+
     df_1h = resample_ohlcv(df_5m, "1h")
     df_4h = resample_ohlcv(df_5m, "4h")
 
     df_5m = add_ema(df_5m, config.EMA_PERIOD)
-    df_5m["adx_1h_proxy"] = None  # placeholder, computed per-signal below for the 1h series once
     adx_1h_series = compute_adx(df_1h, config.ADX_PERIOD)
     df_1h = df_1h.assign(adx=adx_1h_series)
+    df_5m = df_5m.assign(rsi=compute_rsi(df_5m, config.RSI_PERIOD))
+    if config.USE_ATR_STOPS:
+        atr_1h_series = compute_atr(df_1h, config.ATR_PERIOD)
+        df_1h = df_1h.assign(atr=atr_1h_series)
 
     trades = []
-    min_lookback = config.EMA_PERIOD + config.FIB_LOOKBACK + 5
+    min_lookback = max(config.EMA_PERIOD + config.FIB_LOOKBACK + 5, config.RSI_DIVERGENCE_LOOKBACK + 5)
+
+    # how many of the 9 live confirmations this backtest can actually check
+    SIMULATED_CONFIRMATIONS = 7  # 5m_vol, 5m_ema, 1h_ema, 4h_ema, daily_golden_cross, rsi_divergence, sr_room
+    min_needed = max(2, round(config.MIN_CONFIRMATIONS * (SIMULATED_CONFIRMATIONS / 9)))
 
     for i in range(min_lookback, len(df_5m) - 1):
         window = df_5m.iloc[: i + 1]
@@ -149,37 +190,63 @@ def run_backtest(symbol: str = "BTC/USDT", days: int = 30) -> dict:
 
         vol_ratio = volume_spike_ratio(window)
         above_ema = bool(row["close"] > row[f"ema{config.EMA_PERIOD}"])
-
         if not (vol_ratio >= config.VOLUME_SPIKE_MULTIPLIER and above_ema):
             continue
 
-        above_1h = mtf_above_ema_at(df_1h, ts, config.MTF_EMA_PERIOD)
-        above_4h = mtf_above_ema_at(df_4h, ts, config.MTF_EMA_PERIOD)
-
+        # ---- Hard gate: ADX (1h trend strength) ----
         if config.USE_ADX_FILTER:
             visible_1h = df_1h[df_1h["timestamp"] < ts]
             if visible_1h.empty or pd.isna(visible_1h["adx"].iloc[-1]) or \
                     visible_1h["adx"].iloc[-1] < config.ADX_MIN_THRESHOLD:
                 continue
 
-        confirmations = {
-            "5m_volume_spike": True,
-            "5m_above_ema": True,
-            "1h_above_ema": above_1h,
-            "4h_above_ema": above_4h,
-        }
-        confirmation_count = sum(confirmations.values())
-        # OI + 1m pattern aren't simulated here, so scale MIN_CONFIRMATIONS
-        # down proportionally to the 4 confirmations actually available.
-        min_needed = max(2, round(config.MIN_CONFIRMATIONS * (4 / 6)))
-        if confirmation_count < min_needed:
+        # ---- Hard gate: daily uptrend ----
+        daily = daily_trend_at(df_1d, ts) if config.USE_DAILY_TREND_FILTER else {"above_ema_slow": True, "golden_cross": False}
+        if config.USE_DAILY_TREND_FILTER and config.REQUIRE_DAILY_UPTREND:
+            if not daily["above_ema_slow"]:
+                continue
+
+        # ---- Hard gate: RSI overbought ----
+        current_rsi_val = row["rsi"]
+        if config.USE_RSI_OVERBOUGHT_FILTER and current_rsi_val >= config.RSI_OVERBOUGHT_THRESHOLD:
             continue
 
         entry = float(row["close"])
-        fib = fibonacci_extension_targets(window, entry)
-        sl = entry * (1 - config.SL_PCT)
 
-        result = simulate_trade(df_5m, i, entry, fib["tp1"], fib["tp2"], fib["tp3"], sl)
+        # ---- Confirmations ----
+        above_1h = mtf_above_ema_at(df_1h, ts, config.MTF_EMA_PERIOD)
+        above_4h = mtf_above_ema_at(df_4h, ts, config.MTF_EMA_PERIOD)
+        rsi_window = window.iloc[-config.RSI_DIVERGENCE_LOOKBACK:] if len(window) >= config.RSI_DIVERGENCE_LOOKBACK else window
+        half = len(rsi_window) // 2
+        rsi_divergence = False
+        if half > 3:
+            first_half, second_half = rsi_window.iloc[:half], rsi_window.iloc[half:]
+            price_low_1, price_low_2 = first_half["close"].min(), second_half["close"].min()
+            rsi_low_1, rsi_low_2 = first_half["rsi"].min(), second_half["rsi"].min()
+            rsi_divergence = bool(price_low_2 < price_low_1 and rsi_low_2 > rsi_low_1)
+        sr_room = sr_room_at(df_1h, ts, entry) if config.USE_SR_FILTER else True
+
+        confirmation_count = sum([
+            True, True,  # 5m vol + ema already required to reach here
+            above_1h, above_4h, daily["golden_cross"], rsi_divergence, sr_room,
+        ])
+        if confirmation_count < min_needed:
+            continue
+
+        # ---- Targets: ATR-based or Fibonacci-based ----
+        if config.USE_ATR_STOPS:
+            visible_1h = df_1h[df_1h["timestamp"] < ts]
+            atr_val = visible_1h["atr"].iloc[-1] if not visible_1h.empty and not pd.isna(visible_1h["atr"].iloc[-1]) else entry * 0.01
+            sl = entry - atr_val * config.ATR_SL_MULTIPLIER
+            tp1 = entry + atr_val * config.ATR_TP1_MULTIPLIER
+            tp2 = entry + atr_val * config.ATR_TP2_MULTIPLIER
+            tp3 = entry + atr_val * config.ATR_TP3_MULTIPLIER
+        else:
+            fib = fibonacci_extension_targets(window, entry)
+            sl = entry * (1 - config.SL_PCT)
+            tp1, tp2, tp3 = fib["tp1"], fib["tp2"], fib["tp3"]
+
+        result = simulate_trade(df_5m, i, entry, tp1, tp2, tp3, sl)
         result.update({"symbol": symbol, "timestamp": ts, "entry": entry})
         trades.append(result)
 
@@ -204,8 +271,9 @@ def summarize(trades: list[dict], symbol: str, days: int) -> dict:
     running_max = cum.cummax()
     drawdown = (cum - running_max).min()
 
+    stops_label = "ATR-based" if config.USE_ATR_STOPS else "Fibonacci-based"
     print("\n" + "=" * 50)
-    print(f"BACKTEST RESULTS: {symbol} - last {days} days")
+    print(f"BACKTEST RESULTS: {symbol} - last {days} days ({stops_label} stops)")
     print("=" * 50)
     print(f"Total signals:     {len(df)}")
     print(f"Win rate:          {win_rate:.1f}%  ({len(wins)} wins / {len(losses)} losses)")
@@ -217,8 +285,9 @@ def summarize(trades: list[dict], symbol: str, days: int) -> dict:
     print(f"TP3 full hits:     {(df['outcome'] == 'TP3').sum()}")
     print(f"SL hits:           {(df['outcome'] == 'SL').sum()}")
     print("=" * 50)
-    print("NOTE: no fees/slippage modeled. OI + 1m pattern confirmations not")
-    print("simulated (live bot needs slightly more confirmation to fire).")
+    print("NOTE: no fees/slippage modeled. OI, 1m pattern, funding rate, and")
+    print("Fear/Greed filters are NOT simulated (live bot needs slightly more")
+    print("confirmation to fire / has extra gates this doesn't test).")
     print("=" * 50 + "\n")
 
     return {
