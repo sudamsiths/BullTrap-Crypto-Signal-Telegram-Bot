@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ## 4. Configure
 Open the `config.py` file and set:
 ```python
-TELEGRAM_BOT_TOKEN = "your token here"
+TELEGRAM_BOT_TOKEN = "your token"
 TELEGRAM_CHAT_ID = "your chat id here"
 SYMBOLS = ["BTC/USDT", "ETH/USDT", "BERA/USDT"]  # add the coins you want
 ```
