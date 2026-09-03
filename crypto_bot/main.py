@@ -35,6 +35,9 @@ async def monitor_open_positions(spot_exchange, futures_exchange):
     positions = position_tracker.get_open_positions()
     for symbol, position in positions.items():
         try:
+            # Binance IP Ban (418) වළක්වා ගැනීමට loop එක තුළ delay එකක් එකතු කිරීම
+            await position_tracker.safe_position_delay(0.5)
+
             df = fetch_ohlcv(spot_exchange, symbol, timeframe="5m", limit=5)
             current_price = float(df["close"].iloc[-1])
         except Exception as e:
@@ -87,9 +90,19 @@ async def scan_for_signals(spot_exchange, futures_exchange, symbols: list[str]):
             return
 
     for symbol in symbols:
+        # 1. දැනටමත් Open position එකක් තිබේ නම් Skip කරන්න
         if position_tracker.has_open_position(symbol):
             continue
+
+        # 2. ළඟදී Close වී Cooldown කාලය ඇතුළත පවතී නම් Repeat trade නොකර Skip කරන්න
+        if position_tracker.is_in_cooldown(symbol):
+            print(f"[SKIP COOLDOWN] {symbol} recently closed - skipping repeat signal")
+            continue
+
         try:
+            # Rate limit ආරක්ෂාව සඳහා delay එකක්
+            await position_tracker.safe_position_delay(0.3)
+
             df = fetch_ohlcv(spot_exchange, symbol)
             signal = build_signal(spot_exchange, symbol, df, futures_exchange=futures_exchange,
                                    btc_bias=btc_bias)

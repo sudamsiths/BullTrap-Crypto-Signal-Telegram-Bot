@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="increase maximum open positions to 5 and enhance position tracking with error logging" />
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="decrease maximum open positions to 5 for improved risk management" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -203,7 +203,23 @@
       <option name="project" value="LOCAL" />
       <updated>1788410692567</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="increase maximum open positions to 10">
+      <option name="closed" value="true" />
+      <created>1788412359281</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1788412359281</updated>
+    </task>
+    <task id="LOCAL-00018" summary="decrease maximum open positions to 5 for improved risk management">
+      <option name="closed" value="true" />
+      <created>1788413398059</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1788413398059</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -234,6 +250,8 @@
     <MESSAGE value="add telegram command listener for /trades, /pnl, /status; refactor main loop to integrate with Telegram bot" />
     <MESSAGE value="update README to clarify format for TELEGRAM_CHAT_ID" />
     <MESSAGE value="increase maximum open positions to 5 and enhance position tracking with error logging" />
-    <option name="LAST_COMMIT_MESSAGE" value="increase maximum open positions to 5 and enhance position tracking with error logging" />
+    <MESSAGE value="increase maximum open positions to 10" />
+    <MESSAGE value="decrease maximum open positions to 5 for improved risk management" />
+    <option name="LAST_COMMIT_MESSAGE" value="decrease maximum open positions to 5 for improved risk management" />
   </component>
 </project>

@@ -1,15 +1,24 @@
 """
 Tracks open "positions" (real or paper/dry-run) across bot restarts using a
-simple JSON file. Helps manage active trades and prevents hitting API limits.
+simple JSON file. Helps manage active trades, prevents hitting API limits,
+and enforces signal cooldowns to stop repeat trades after Stop Loss (SL).
 """
 
 import json
 import os
 import asyncio
+import time
 import logging
 import config
 
 logger = logging.getLogger(__name__)
+
+# In-memory store for closed positions cooldown
+# Format: {"BTC/USDT": timestamp_when_closed}
+CLOSED_COOLDOWNS = {}
+
+# Cooldown time in seconds (e.g., 1800 seconds = 30 minutes)
+COOLDOWN_SECONDS = getattr(config, "SIGNAL_COOLDOWN_SECONDS", 1800)
 
 
 def _load() -> dict:
@@ -62,7 +71,22 @@ def close_position(symbol: str):
     if symbol in state:
         del state[symbol]
         _save(state)
-        logger.info(f"Closed position for {symbol}")
+        # Position එක close කළ සැනින් cooldown list එකට එකතු කරයි
+        CLOSED_COOLDOWNS[symbol] = time.time()
+        logger.info(f"Closed position for {symbol}. Cooldown started for {COOLDOWN_SECONDS}s.")
+
+
+def is_in_cooldown(symbol: str) -> bool:
+    """Check if the symbol was recently closed and is in cooldown period."""
+    if symbol not in CLOSED_COOLDOWNS:
+        return False
+
+    elapsed = time.time() - CLOSED_COOLDOWNS[symbol]
+    if elapsed < COOLDOWN_SECONDS:
+        return True
+    else:
+        del CLOSED_COOLDOWNS[symbol]  # Clean up expired cooldowns
+        return False
 
 
 def clear_all_positions():
@@ -71,9 +95,9 @@ def clear_all_positions():
     logger.info("Cleared all active positions from state file.")
 
 
-async def safe_position_delay(seconds: float = 1.0):
+async def safe_position_delay(seconds: float = 0.5):
     """
     Helper delay to prevent Binance API 418 Rate Limit (IP Ban)
-    when iterating through multiple open positions.
+    when iterating through multiple requests.
     """
     await asyncio.sleep(seconds)
