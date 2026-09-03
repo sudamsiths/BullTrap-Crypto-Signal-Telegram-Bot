@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add python-dotenv to requirements for environment variable support">
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="update README to clarify format for TELEGRAM_BOT_TOKEN">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/backtest.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/backtest.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/crypto_bot/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/signal_logic.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/signal_logic.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/telegram_bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/telegram_bot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,8 +150,35 @@
       <option name="project" value="LOCAL" />
       <updated>1788368488151</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="add ATR-based dynamic stops and targets, implement funding rate and fear &amp; greed filters for signal logic">
+      <option name="closed" value="true" />
+      <created>1788400245950</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1788400245950</updated>
+    </task>
+    <task id="LOCAL-00011" summary="update README to clarify format for TELEGRAM_BOT_TOKEN">
+      <option name="closed" value="true" />
+      <created>1788400324096</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1788400324096</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="add candlestick pattern detection and update signal logic for entry timing" />
@@ -167,6 +190,8 @@
     <MESSAGE value="update BTC market bias filter to allow altcoin longs during bearish conditions" />
     <MESSAGE value="add support for loading environment variables from .env file and update .gitignore" />
     <MESSAGE value="add python-dotenv to requirements for environment variable support" />
-    <option name="LAST_COMMIT_MESSAGE" value="add python-dotenv to requirements for environment variable support" />
+    <MESSAGE value="add ATR-based dynamic stops and targets, implement funding rate and fear &amp; greed filters for signal logic" />
+    <MESSAGE value="update README to clarify format for TELEGRAM_BOT_TOKEN" />
+    <option name="LAST_COMMIT_MESSAGE" value="update README to clarify format for TELEGRAM_BOT_TOKEN" />
   </component>
 </project>

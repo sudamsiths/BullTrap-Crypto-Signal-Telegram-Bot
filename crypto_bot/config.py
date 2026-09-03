@@ -85,7 +85,7 @@ OI_CHANGE_LOOKBACK = 6            # number of OI snapshots to compare (5m each ~
 OI_CHANGE_THRESHOLD_PCT = 3.0     # OI must have grown at least this % to confirm "fresh inflow"
 
 # ---- Confidence scoring ----
-MIN_CONFIRMATIONS = 6             # out of 9 total: 5m vol, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern, daily golden cross, RSI divergence, S/R room
+MIN_CONFIRMATIONS = 4             # out of 9 total: 5m vol, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern, daily golden cross, RSI divergence, S/R room
 
 # ---- 1m candlestick pattern (entry timing) ----
 PATTERN_TIMEFRAME = "1m"

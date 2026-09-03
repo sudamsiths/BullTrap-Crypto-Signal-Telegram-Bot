@@ -4,6 +4,8 @@ Formats and sends the signal message to Telegram.
 
 from telegram import Bot
 from telegram.constants import ParseMode
+from telegram.error import BadRequest
+import re
 import config
 
 
@@ -65,18 +67,39 @@ def format_signal_message(signal: dict) -> str:
     )
 
 
+def _strip_markdown(text: str) -> str:
+    """Removes Markdown formatting characters so the message can be sent as plain text."""
+    return re.sub(r"[*_`]", "", text)
+
+
+async def _send_safe(bot: Bot, text: str, use_markdown: bool):
+    """
+    Sends with Markdown if requested; if Telegram rejects it due to a parse
+    error (e.g. an unescaped _, *, or ` in dynamic content like a coin
+    symbol), automatically retries as plain text so the alert always gets
+    through instead of silently failing.
+    """
+    if not use_markdown:
+        await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=text)
+        return
+    try:
+        await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=text,
+                                parse_mode=ParseMode.MARKDOWN)
+    except BadRequest as e:
+        if "can't parse entities" in str(e).lower():
+            print(f"[telegram] Markdown parse error, resending as plain text: {e}")
+            await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=_strip_markdown(text))
+        else:
+            raise
+
+
 async def send_signal(signal: dict):
     bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
     message = format_signal_message(signal)
-    await bot.send_message(
-        chat_id=config.TELEGRAM_CHAT_ID,
-        text=message,
-        parse_mode=ParseMode.MARKDOWN,
-    )
+    await _send_safe(bot, message, use_markdown=True)
 
 
 async def send_text(text: str, markdown: bool = False):
     """Utility for sending plain (or optionally Markdown-formatted) status messages."""
     bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
-    kwargs = {"parse_mode": ParseMode.MARKDOWN} if markdown else {}
-    await bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=text, **kwargs)
+    await _send_safe(bot, text, use_markdown=markdown)
