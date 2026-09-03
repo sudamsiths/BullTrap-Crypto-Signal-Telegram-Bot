@@ -23,6 +23,7 @@ from btc_bias import get_btc_bias
 from correlation import is_too_correlated_with_open_positions
 from fear_greed import get_fear_greed_index, sentiment_allows_signals
 import performance_tracker
+from telegram_commands import build_application
 from trade_executor import (
     get_trading_exchange, open_long_position,
     check_tp1_and_update, check_sl_hit_dry_run, move_stop_to_breakeven,
@@ -129,10 +130,22 @@ async def main_loop():
         print("WARNING: LIVE mode - real orders with real money will be placed.")
         print("=" * 60)
 
-    while True:
-        await monitor_open_positions(spot_exchange, futures_exchange)
-        await scan_for_signals(spot_exchange, futures_exchange, symbols)
-        await asyncio.sleep(config.CHECK_INTERVAL_SECONDS)
+    # Start the /trades, /pnl, /status command listener alongside the scan loop
+    app = build_application()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    print("Telegram command listener started (/trades, /pnl, /status, /help)")
+
+    try:
+        while True:
+            await monitor_open_positions(spot_exchange, futures_exchange)
+            await scan_for_signals(spot_exchange, futures_exchange, symbols)
+            await asyncio.sleep(config.CHECK_INTERVAL_SECONDS)
+    finally:
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 
 if __name__ == "__main__":
