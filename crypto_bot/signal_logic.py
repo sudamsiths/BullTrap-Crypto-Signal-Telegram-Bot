@@ -20,17 +20,22 @@ from rsi import is_overbought, has_bullish_divergence
 from support_resistance import has_room_to_target
 from atr import current_atr
 from funding_rate import funding_rate_ok
+from smc_strategy import calculate_smc_signal
 
 
 def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None,
-                  btc_bias: dict = None) -> dict | None:
+                 btc_bias: dict = None) -> dict | None:
     """
     Returns a fully-scored signal dict if enough confirmations line up,
-    otherwise None. `futures_exchange` is optional - pass a futures-mode
-    ccxt instance to enable open-interest confirmation; without it OI is
-    simply skipped (not counted as a confirmation). `btc_bias` is the dict
-    from btc_bias.get_btc_bias(), computed once per scan cycle by main.py.
+    otherwise None. Checks SMC strategy first before running default indicator analysis.
     """
+
+    # ---- Priority Check: SMC Strategy (CHoCH + Fib 0.5) ----
+    smc_signal = calculate_smc_signal(df_5m)
+    if smc_signal:
+        smc_signal["symbol"] = symbol
+        return smc_signal
+
     # ---- Hard gate: BTC market bias ----
     if btc_bias is not None and not bias_allows_longs(btc_bias):
         return None  # BTC itself is bearish - suppress new altcoin longs

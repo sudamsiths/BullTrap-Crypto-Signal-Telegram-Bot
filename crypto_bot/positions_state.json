@@ -20,5 +20,38 @@
     "tp1_hit": true,
     "qty": null,
     "mode": "dry_run"
+  },
+  "SOL/USDT": {
+    "symbol": "SOL/USDT",
+    "entry": 101.0,
+    "sl": 100.67643196845424,
+    "tp1": 101.32356803154576,
+    "tp2": 101.64713606309152,
+    "tp3": 102.07856010515253,
+    "tp1_hit": false,
+    "qty": null,
+    "mode": "dry_run"
+  },
+  "ZEC/USDT": {
+    "symbol": "ZEC/USDT",
+    "entry": 833.03,
+    "sl": 828.7173806197248,
+    "tp1": 837.3426193802751,
+    "tp2": 841.6552387605503,
+    "tp3": 847.4053979342505,
+    "tp1_hit": false,
+    "qty": null,
+    "mode": "dry_run"
+  },
+  "UNI/USDT": {
+    "symbol": "UNI/USDT",
+    "entry": 5.727,
+    "sl": 5.678749694206486,
+    "tp1": 5.775250305793515,
+    "tp2": 5.82350061158703,
+    "tp3": 5.88783435264505,
+    "tp1_hit": false,
+    "qty": null,
+    "mode": "dry_run"
   }
 }
