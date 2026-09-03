@@ -33,7 +33,7 @@ def format_signal_message(signal: dict) -> str:
     btc_bias = signal.get("btc_bias")
     btc_bias_emoji = {"bullish": "🟢", "bearish": "🔴", "neutral": "🟡"}.get(btc_bias, "🟡")
 
-    mode_note = "🧪 DRY_RUN (paper only)" if config.DRY_RUN else (
+    mode_note = "🧪 DRY RUN (paper only)" if config.DRY_RUN else (
         "🧪 TESTNET" if config.USE_TESTNET else "🔴 LIVE"
     )
 
