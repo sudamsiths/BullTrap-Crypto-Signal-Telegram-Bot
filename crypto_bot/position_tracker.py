@@ -1,12 +1,15 @@
 """
 Tracks open "positions" (real or paper/dry-run) across bot restarts using a
-simple JSON file. This is what lets the bot remember "TP1 already hit, move
-SL to breakeven" between scan cycles.
+simple JSON file. Helps manage active trades and prevents hitting API limits.
 """
 
 import json
 import os
+import asyncio
+import logging
 import config
+
+logger = logging.getLogger(__name__)
 
 
 def _load() -> dict:
@@ -15,13 +18,17 @@ def _load() -> dict:
     try:
         with open(config.STATE_FILE, "r") as f:
             return json.load(f)
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error(f"Error loading state file: {e}")
         return {}
 
 
 def _save(state: dict):
-    with open(config.STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
+    try:
+        with open(config.STATE_FILE, "w") as f:
+            json.dump(state, f, indent=2)
+    except OSError as e:
+        logger.error(f"Error saving state file: {e}")
 
 
 def get_open_positions() -> dict:
@@ -40,6 +47,7 @@ def add_position(symbol: str, position: dict):
     state = _load()
     state[symbol] = position
     _save(state)
+    logger.info(f"Opened position for {symbol}")
 
 
 def update_position(symbol: str, updates: dict):
@@ -54,3 +62,18 @@ def close_position(symbol: str):
     if symbol in state:
         del state[symbol]
         _save(state)
+        logger.info(f"Closed position for {symbol}")
+
+
+def clear_all_positions():
+    """Reset all stuck open positions to fix 'Max open positions reached'."""
+    _save({})
+    logger.info("Cleared all active positions from state file.")
+
+
+async def safe_position_delay(seconds: float = 1.0):
+    """
+    Helper delay to prevent Binance API 418 Rate Limit (IP Ban)
+    when iterating through multiple open positions.
+    """
+    await asyncio.sleep(seconds)

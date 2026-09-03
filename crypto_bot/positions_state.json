@@ -1,15 +1,4 @@
 {
-  "ARB/USDT": {
-    "symbol": "ARB/USDT",
-    "entry": 0.1241,
-    "sl": 0.1241,
-    "tp1": 0.12557186543424784,
-    "tp2": 0.12704373086849566,
-    "tp3": 0.12900621811415944,
-    "tp1_hit": true,
-    "qty": null,
-    "mode": "dry_run"
-  },
   "AWE/USDT": {
     "symbol": "AWE/USDT",
     "entry": 0.06176,

@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add telegram command listener for /trades, /pnl, /status; refactor main loop to integrate with Telegram bot" />
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="update README to clarify format for TELEGRAM_CHAT_ID" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -187,7 +187,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788402506070</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="update README to clarify format for TELEGRAM_CHAT_ID">
+      <option name="closed" value="true" />
+      <created>1788402664099</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1788402664099</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -216,6 +224,7 @@
     <MESSAGE value="refactor telegram bot message handling to safely send Markdown and reduce confirmation requirements" />
     <MESSAGE value="fix telegram bot message handling to correct DRY RUN note formatting" />
     <MESSAGE value="add telegram command listener for /trades, /pnl, /status; refactor main loop to integrate with Telegram bot" />
-    <option name="LAST_COMMIT_MESSAGE" value="add telegram command listener for /trades, /pnl, /status; refactor main loop to integrate with Telegram bot" />
+    <MESSAGE value="update README to clarify format for TELEGRAM_CHAT_ID" />
+    <option name="LAST_COMMIT_MESSAGE" value="update README to clarify format for TELEGRAM_CHAT_ID" />
   </component>
 </project>

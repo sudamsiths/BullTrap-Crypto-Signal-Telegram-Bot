@@ -66,7 +66,7 @@ MARKET_TYPE = "future"           # Binance USDT-M futures (needed for OI data + 
 
 # ---- Risk management ----
 RISK_PER_TRADE_PCT = 1.0         # % of account balance risked per trade (distance entry->SL)
-MAX_OPEN_POSITIONS = 3           # don't open more than this many trades at once
+MAX_OPEN_POSITIONS = 5           # don't open more than this many trades at once
 LEVERAGE = 2                     # keep this LOW; higher leverage = faster liquidation
 MIN_NOTIONAL_USDT = 5             # Binance's exchange minimum order size (varies per symbol)
 
