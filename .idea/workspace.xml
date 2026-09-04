@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="implement cooldown mechanism for closed positions to prevent repeat trades">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/positions_state.json" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/positions_state.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/signal_logic.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/signal_logic.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_bot/trade_log.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_bot/trade_log.jsonl" afterDir="false" />
+    <list default="true" id="fc0a8d35-2b35-4b29-ab90-2e397b6dc97e" name="Changes" comment="add SMC strategy module with pivot detection and signal calculation">
+      <change beforePath="$PROJECT_DIR$/crypto_bot/smc_structure.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -232,7 +229,15 @@
       <option name="project" value="LOCAL" />
       <updated>1788413709127</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="add SMC strategy module with pivot detection and signal calculation">
+      <option name="closed" value="true" />
+      <created>1788519440766</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1788519440766</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -266,6 +271,7 @@
     <MESSAGE value="increase maximum open positions to 10" />
     <MESSAGE value="decrease maximum open positions to 5 for improved risk management" />
     <MESSAGE value="implement cooldown mechanism for closed positions to prevent repeat trades" />
-    <option name="LAST_COMMIT_MESSAGE" value="implement cooldown mechanism for closed positions to prevent repeat trades" />
+    <MESSAGE value="add SMC strategy module with pivot detection and signal calculation" />
+    <option name="LAST_COMMIT_MESSAGE" value="add SMC strategy module with pivot detection and signal calculation" />
   </component>
 </project>

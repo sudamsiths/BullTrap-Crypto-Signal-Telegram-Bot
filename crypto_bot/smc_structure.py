@@ -1,80 +1,153 @@
 """
-SMC Strategy Module
-Strategy Logic:
-1. Uptrend Reversal via CHoCH (Change of Character)
-2. Confirmation of Market Structure Shift (BOS/MS)
-3. Entry at Fibonacci 0.5 Premium Zone
+Smart Money Concepts (SMC) / ICT-style market structure detection.
+
+Bullish setup sequence (mirrors the user's chart, which showed the bearish
+version - this implements the LONG/bullish equivalent since the bot is
+long-only):
+
+1. Price is in a downtrend (series of lower-highs / lower-lows).
+2. CHOCH (Change of Character): price breaks back ABOVE the most recent
+   swing high (a "lower high") - first sign the downtrend may be reversing.
+3. After the CHOCH, price should form a HIGHER LOW (holding above the low
+   that started the CHOCH leg) - this confirms the reversal isn't just a
+   fakeout.
+4. MS (Market Structure) break: price then breaks ABOVE the swing high that
+   followed the CHOCH - this confirms a new uptrend has started (higher
+   high after a higher low).
+5. Entry zone: draw a Fibonacci retracement from the higher-low (step 3) to
+   the MS breakout high (step 4). The 0.5-0.618 zone is the entry area -
+   the idea being smart money re-accumulates here before continuing up.
+
+This is inherently a "wait for structure, then wait for a pullback into a
+zone" strategy - it will not fire on every candle, only when the full
+sequence has actually formed.
 """
 
 import pandas as pd
-import numpy as np
+import config
 
 
-def detect_pivots(df: pd.DataFrame, window: int = 2) -> pd.DataFrame:
-    """Swing Highs සහ Swing Lows (Pivot Points) හඳුනාගැනීම"""
-    df['is_pivot_high'] = True
-    df['is_pivot_low'] = True
-
-    for i in range(1, window + 1):
-        df['is_pivot_high'] &= (df['high'] > df['high'].shift(i)) & (df['high'] > df['high'].shift(-i))
-        df['is_pivot_low'] &= (df['low'] < df['low'].shift(i)) & (df['low'] < df['low'].shift(-i))
-
-    return df
-
-
-def calculate_smc_signal(df: pd.DataFrame) -> dict | None:
+def find_pivots(df: pd.DataFrame, window: int = None) -> tuple[list[dict], list[dict]]:
     """
-    SMC Bearish CHoCH + Fib 0.5 Strategy Indicator
+    Returns (pivot_highs, pivot_lows), each a list of {"index": i, "price": float}
+    sorted by index (time order). A pivot is a local max/min within `window`
+    candles on both sides.
     """
-    if len(df) < 50:
-        return None
+    window = window or config.SMC_PIVOT_WINDOW
+    highs, lows = df["high"].values, df["low"].values
+    pivot_highs, pivot_lows = [], []
 
-    df = detect_pivots(df.copy(), window=2)
+    for i in range(window, len(df) - window):
+        high_segment = highs[i - window: i + window + 1]
+        if highs[i] == high_segment.max():
+            pivot_highs.append({"index": i, "price": float(highs[i])})
 
-    # Pivot Highs & Lows වෙන් කර ගැනීම
-    pivot_highs = df[df['is_pivot_high']]
-    pivot_lows = df[df['is_pivot_low']]
+        low_segment = lows[i - window: i + window + 1]
+        if lows[i] == low_segment.min():
+            pivot_lows.append({"index": i, "price": float(lows[i])})
+
+    return pivot_highs, pivot_lows
+
+
+def detect_bullish_smc_setup(df: pd.DataFrame, window: int = None) -> dict | None:
+    """
+    Scans for the most recent complete CHOCH -> higher-low -> MS-break
+    sequence and checks whether price is currently sitting in the
+    resulting Fibonacci entry zone. Returns None if no complete, still-valid
+    setup is found.
+
+    Returned dict (when found):
+        {
+          "choch_index", "choch_price"      - the swing high that got broken (CHOCH)
+          "higher_low_index", "higher_low_price"
+          "ms_index", "ms_price"            - the swing high whose break confirmed MS
+          "fib_zone_low", "fib_zone_high"   - the 0.5-0.618 retracement zone
+          "in_entry_zone": bool             - is the CURRENT close inside that zone
+          "structure_invalidated": bool     - has price broken back below the higher-low
+        }
+    """
+    window = window or config.SMC_PIVOT_WINDOW
+    pivot_highs, pivot_lows = find_pivots(df, window)
 
     if len(pivot_highs) < 2 or len(pivot_lows) < 2:
         return None
 
-    # Swing Price Levels
-    last_swing_high = pivot_highs['high'].iloc[-1]
-    last_swing_low = pivot_lows['low'].iloc[-1]
-    prev_swing_low = pivot_lows['low'].iloc[-2]
+    # Walk backward through swing highs looking for one that price has
+    # broken above AFTER a preceding downtrend leg (i.e. a CHOCH candidate),
+    # then verify the higher-low + MS-break sequence that should follow it.
+    last_close_idx = len(df) - 1
+    last_close = float(df["close"].iloc[-1])
 
-    current_price = float(df['close'].iloc[-1])
-    current_candle_body_close = float(df['close'].iloc[-1])
+    # Consider swing highs as CHOCH candidates, most recent first, but must
+    # leave room for a higher-low and an MS swing high afterward.
+    for choch in reversed(pivot_highs[:-1]):  # exclude the very last pivot high (need one after it)
+        choch_idx, choch_price = choch["index"], choch["price"]
 
-    # 1. CHoCH Condition (Candle Body Close below previous Swing Low)
-    is_choch_valid = current_candle_body_close < prev_swing_low
+        # Did price close above choch_price at some point after choch_idx? (the actual CHOCH break)
+        after_choch = df.iloc[choch_idx + 1:]
+        break_candidates = after_choch[after_choch["close"] > choch_price]
+        if break_candidates.empty:
+            continue
+        choch_break_idx = break_candidates.index[0]
 
-    if is_choch_valid:
-        # 2. Fibonacci 0.5 (50% Retracement) Level Calculation
-        fib_05_zone = last_swing_high - ((last_swing_high - last_swing_low) * 0.5)
+        # The "structure low" is the DEEPEST swing low that formed any time
+        # before the CHOCH break confirms - this is the true bottom of the
+        # down-leg being reversed, whether it formed before or after the
+        # CHOCH swing high itself.
+        lows_before_break = [p for p in pivot_lows if p["index"] < choch_break_idx]
+        if not lows_before_break:
+            continue
+        pre_choch_low = min(lows_before_break, key=lambda p: p["price"])
 
-        # 3. Entry Condition: Price එක Retrace වී 0.5 Zone එකට පැමිණ තිබේද බලන්න
-        if current_price >= fib_05_zone and current_price < last_swing_high:
-            # Risk Management
-            stop_loss = last_swing_high * 1.0025  # High එකට 0.25% කින් උඩින් SL
-            risk = stop_loss - current_price
+        # Find the swing low that formed AFTER the CHOCH break (the "higher low")
+        higher_lows = [p for p in pivot_lows if p["index"] > choch_break_idx]
+        if not higher_lows:
+            continue
+        higher_low = higher_lows[0]
 
-            if risk <= 0:
-                return None
+        # It must actually be HIGHER than the structure low - otherwise this
+        # isn't a real higher low and the reversal isn't confirmed.
+        if higher_low["price"] <= pre_choch_low["price"]:
+            continue
 
-            tp1 = current_price - (risk * 1.5)  # 1:1.5 RR
-            tp2 = current_price - (risk * 2.5)  # 1:2.5 RR
+        # Find the swing high that formed after the higher low (MS candidate)
+        ms_candidates = [p for p in pivot_highs if p["index"] > higher_low["index"]]
+        if not ms_candidates:
+            continue
+        ms_swing = ms_candidates[0]
 
-            return {
-                "symbol": "",
-                "signal_type": "SHORT",
-                "strategy": "SMC CHoCH + Fib 0.5",
-                "price": current_price,
-                "stop_loss": stop_loss,
-                "take_profit_1": tp1,
-                "take_profit_2": tp2,
-                "fib_05": fib_05_zone,
-                "score": 85
-            }
+        # MS break: has price closed above ms_swing's price after it formed?
+        after_ms = df.iloc[ms_swing["index"] + 1:]
+        ms_break_candidates = after_ms[after_ms["close"] > ms_swing["price"]]
+        if ms_break_candidates.empty:
+            continue  # MS not confirmed yet - structure incomplete
+
+        ms_break_idx = ms_break_candidates.index[0]
+
+        # ---- We have a complete setup: build the Fibonacci zone ----
+        leg_low = higher_low["price"]
+        leg_high = ms_swing["price"]
+        leg_range = leg_high - leg_low
+        if leg_range <= 0:
+            continue
+
+        fib_zone_high = leg_high - leg_range * config.SMC_FIB_ZONE_START  # e.g. 0.5
+        fib_zone_low = leg_high - leg_range * config.SMC_FIB_ZONE_END    # e.g. 0.618
+
+        structure_invalidated = last_close < higher_low["price"]
+        in_entry_zone = (
+            not structure_invalidated
+            and fib_zone_low <= last_close <= fib_zone_high
+            and last_close_idx > ms_break_idx  # only look for entries AFTER the MS break confirmed
+        )
+
+        return {
+            "choch_index": choch_idx, "choch_price": choch_price,
+            "higher_low_index": higher_low["index"], "higher_low_price": higher_low["price"],
+            "ms_index": ms_swing["index"], "ms_price": ms_swing["price"],
+            "fib_zone_low": fib_zone_low, "fib_zone_high": fib_zone_high,
+            "in_entry_zone": in_entry_zone,
+            "structure_invalidated": structure_invalidated,
+        }
 
     return None
