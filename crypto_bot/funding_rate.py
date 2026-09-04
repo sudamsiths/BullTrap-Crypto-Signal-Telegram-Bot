@@ -5,6 +5,9 @@ side is crowded, which raises the odds of a long-squeeze/reversal.
 """
 
 import config
+from open_interest import _resolve_futures_symbol
+
+_warned_symbols = set()
 
 
 def get_funding_rate_pct(exchange, symbol: str) -> float | None:
@@ -12,13 +15,20 @@ def get_funding_rate_pct(exchange, symbol: str) -> float | None:
     Returns the current funding rate as a percentage (e.g. 0.03 = 0.03%),
     or None if it can't be fetched (spot-only symbol, API error, etc.).
     """
+    resolved = _resolve_futures_symbol(exchange, symbol)
+    if resolved is None:
+        return None  # not on futures - open_interest.py already logs this once
+
     try:
-        funding = exchange.fetch_funding_rate(symbol)
+        funding = exchange.fetch_funding_rate(resolved)
         rate = funding.get("fundingRate")
         if rate is None:
             return None
         return float(rate) * 100
-    except Exception:
+    except Exception as e:
+        if symbol not in _warned_symbols:
+            print(f"[funding_rate] {symbol}: fetch failed ({type(e).__name__}: {e})")
+            _warned_symbols.add(symbol)
         return None
 
 

@@ -20,22 +20,18 @@ from rsi import is_overbought, has_bullish_divergence
 from support_resistance import has_room_to_target
 from atr import current_atr
 from funding_rate import funding_rate_ok
-from smc_strategy import calculate_smc_signal
+from smc_structure import detect_bullish_smc_setup
 
 
 def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=None,
-                 btc_bias: dict = None) -> dict | None:
+                  btc_bias: dict = None) -> dict | None:
     """
     Returns a fully-scored signal dict if enough confirmations line up,
-    otherwise None. Checks SMC strategy first before running default indicator analysis.
+    otherwise None. `futures_exchange` is optional - pass a futures-mode
+    ccxt instance to enable open-interest confirmation; without it OI is
+    simply skipped (not counted as a confirmation). `btc_bias` is the dict
+    from btc_bias.get_btc_bias(), computed once per scan cycle by main.py.
     """
-
-    # ---- Priority Check: SMC Strategy (CHoCH + Fib 0.5) ----
-    smc_signal = calculate_smc_signal(df_5m)
-    if smc_signal:
-        smc_signal["symbol"] = symbol
-        return smc_signal
-
     # ---- Hard gate: BTC market bias ----
     if btc_bias is not None and not bias_allows_longs(btc_bias):
         return None  # BTC itself is bearish - suppress new altcoin longs
@@ -109,7 +105,23 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
     # ---- RSI bullish divergence (bonus confirmation, not a gate) ----
     rsi_divergence = has_bullish_divergence(df_5m)
 
-    # ---- Score confirmations (max 9) ----
+    # ---- SMC structure: CHOCH -> higher-low -> MS break -> Fib entry zone ----
+    smc_setup = None
+    smc_in_zone = False
+    if config.USE_SMC_FILTER:
+        try:
+            df_smc = fetch_ohlcv(exchange, symbol, timeframe=config.SR_TIMEFRAME,
+                                  limit=config.SMC_PIVOT_WINDOW * 30)
+            smc_setup = detect_bullish_smc_setup(df_smc)
+            smc_in_zone = bool(smc_setup and smc_setup["in_entry_zone"]
+                                and not smc_setup["structure_invalidated"])
+        except Exception:
+            smc_in_zone = False
+
+    if config.REQUIRE_SMC_SETUP and not smc_in_zone:
+        return None  # hard gate: no live CHOCH->MS->fib-zone setup, don't fire
+
+    # ---- Score confirmations (max 10) ----
     confirmations = {
         "5m_volume_spike": vol_ratio_5m >= config.VOLUME_SPIKE_MULTIPLIER,
         "5m_above_ema": above_ema_5m,
@@ -120,9 +132,13 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "daily_golden_cross": daily_trend.get("golden_cross", False),
         "rsi_bullish_divergence": rsi_divergence,
         "sr_room_to_target": sr_room,
+        "smc_fib_zone_entry": smc_in_zone,
     }
-    confirmation_count = sum(1 for v in confirmations.values() if v)
-    score = int((confirmation_count / len(confirmations)) * 100)
+    confirmation_count = sum(1 for v in confirmations.values() if v)  # raw count - still used for MIN_CONFIRMATIONS gate
+
+    max_possible_weight = sum(config.CONFIRMATION_WEIGHTS.get(k, 1.0) for k in confirmations)
+    achieved_weight = sum(config.CONFIRMATION_WEIGHTS.get(k, 1.0) for k, v in confirmations.items() if v)
+    score = int((achieved_weight / max_possible_weight) * 100) if max_possible_weight > 0 else 0
 
     if confirmation_count < config.MIN_CONFIRMATIONS:
         return None  # not enough alignment across timeframes/OI - skip
@@ -163,6 +179,8 @@ def build_signal(exchange, symbol: str, df_5m: pd.DataFrame, futures_exchange=No
         "daily_golden_cross": daily_trend.get("golden_cross"),
         "rsi_divergence": rsi_divergence,
         "sr_room_to_target": sr_room,
+        "smc_in_zone": smc_in_zone,
+        "smc_setup": smc_setup,
         "confirmations": confirmations,
         "confirmation_count": confirmation_count,
         "score": score,

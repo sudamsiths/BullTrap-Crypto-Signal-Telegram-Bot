@@ -26,6 +26,7 @@ def log_signal_opened(signal: dict, mode: str):
         "tp1": signal["tp1"], "tp2": signal["tp2"], "tp3": signal["tp3"],
         "score": signal.get("score"),
         "confirmation_count": signal.get("confirmation_count"),
+        "confirmations": signal.get("confirmations", {}),  # individual flags, for later correlation analysis
         "mode": mode,
     }
     _append(record)

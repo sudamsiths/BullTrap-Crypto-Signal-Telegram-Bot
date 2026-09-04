@@ -66,7 +66,7 @@ MARKET_TYPE = "future"           # Binance USDT-M futures (needed for OI data + 
 
 # ---- Risk management ----
 RISK_PER_TRADE_PCT = 1.0         # % of account balance risked per trade (distance entry->SL)
-MAX_OPEN_POSITIONS = 5           # don't open more than this many trades at once
+MAX_OPEN_POSITIONS = 3           # don't open more than this many trades at once
 LEVERAGE = 2                     # keep this LOW; higher leverage = faster liquidation
 MIN_NOTIONAL_USDT = 5             # Binance's exchange minimum order size (varies per symbol)
 
@@ -85,7 +85,20 @@ OI_CHANGE_LOOKBACK = 6            # number of OI snapshots to compare (5m each ~
 OI_CHANGE_THRESHOLD_PCT = 3.0     # OI must have grown at least this % to confirm "fresh inflow"
 
 # ---- Confidence scoring ----
-MIN_CONFIRMATIONS = 4             # out of 9 total: 5m vol, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern, daily golden cross, RSI divergence, S/R room
+MIN_CONFIRMATIONS = 6             # out of 10 total: 5m vol, 5m EMA, 1h EMA, 4h EMA, OI inflow, 1m pattern, daily golden cross, RSI divergence, S/R room, SMC fib-zone entry
+
+# Per-confirmation weights for score calculation. Default weight is 1.0 for
+# any confirmation not listed here. Adjust these as real (not backtest)
+# performance data comes in - see check_pnl.py / analyze_performance.py.
+# Current weights reflect an early real-data read (~68 paper trades,
+# 2026-09-01 to 2026-09-04): RSI divergence showed a much higher win rate
+# (43.5% vs 18.2%) and golden_cross showed a *lower* win rate when True
+# (22.6% vs 42.9% when False) - counterintuitive, small sample, being
+# de-emphasized rather than removed until more data confirms or refutes it.
+CONFIRMATION_WEIGHTS = {
+    "rsi_bullish_divergence": 2.0,
+    "daily_golden_cross": 0.5,
+}
 
 # ---- 1m candlestick pattern (entry timing) ----
 PATTERN_TIMEFRAME = "1m"
@@ -147,6 +160,13 @@ BLOCK_ON_EXTREME_GREED = False    # True: hard-skip ALL signals when market-wide
 
 # ---- Performance tracking ----
 PERFORMANCE_LOG_FILE = "trade_log.jsonl"
+
+# ---- SMC (Smart Money Concepts) market structure ----
+USE_SMC_FILTER = True             # bonus confirmation, not a hard gate by default
+REQUIRE_SMC_SETUP = False         # True: hard gate, only trade when a full CHOCH->MS->fib-zone setup is live
+SMC_PIVOT_WINDOW = 5              # candles on each side to confirm a swing high/low
+SMC_FIB_ZONE_START = 0.5          # entry zone: leg_high - leg_range * this  (0.5 = 50% retracement)
+SMC_FIB_ZONE_END = 0.618          # entry zone: leg_high - leg_range * this  (0.618 = 61.8% retracement)
 
 # ---- State persistence ----
 STATE_FILE = "positions_state.json"
