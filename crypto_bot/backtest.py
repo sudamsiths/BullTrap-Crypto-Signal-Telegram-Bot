@@ -253,7 +253,7 @@ def run_backtest(symbol: str = "BTC/USDT", days: int = 30) -> dict:
     return summarize(trades, symbol, days)
 
 
-def summarize(trades: list[dict], symbol: str, days: int) -> dict:
+def summarize(trades: list[dict], symbol: str, days: int, strategy_label: str = None) -> dict:
     if not trades:
         print("No signals generated in this window - try more days or looser settings.")
         return {"trades": [], "count": 0}
@@ -271,7 +271,7 @@ def summarize(trades: list[dict], symbol: str, days: int) -> dict:
     running_max = cum.cummax()
     drawdown = (cum - running_max).min()
 
-    stops_label = "ATR-based" if config.USE_ATR_STOPS else "Fibonacci-based"
+    stops_label = strategy_label or ("ATR-based" if config.USE_ATR_STOPS else "Fibonacci-based")
     print("\n" + "=" * 50)
     print(f"BACKTEST RESULTS: {symbol} - last {days} days ({stops_label} stops)")
     print("=" * 50)
